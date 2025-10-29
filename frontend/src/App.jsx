@@ -1,12 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
   Send,
   FileText,
   Loader2,
-  X,
-  AlertCircle,
-  Download,
+  X
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -25,31 +23,39 @@ function App() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState(null);
   const [showBanner, setShowBanner] = useState(true);
   const [chatWidth, setChatWidth] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1.0);
+  const [renderedPages, setRenderedPages] = useState(new Set([1, 2, 3]));
 
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
   const pdfContainerRef = useRef(null);
   const pageRefs = useRef([]);
   const containerRef = useRef(null);
+  const observerRef = useRef(null);
 
+  // Initialize page refs
   useEffect(() => {
     if (totalPages > 0) {
       pageRefs.current = pageRefs.current.slice(0, totalPages);
     }
   }, [totalPages]);
 
+  // Auto scroll to latest message
   useEffect(() => {
     if (messages.length > 1) {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
+  // Handle resizing
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || !containerRef.current) return;
@@ -78,6 +84,51 @@ function App() {
     };
   }, [isResizing]);
 
+  // Intersection Observer for lazy loading pages
+  useEffect(() => {
+    if (!pdfContainerRef.current || totalPages === 0) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const pageNum = parseInt(entry.target.dataset.pageNumber);
+            if (pageNum) {
+              setRenderedPages((prev) => new Set([...prev, pageNum]));
+            }
+          }
+        });
+      },
+      {
+        root: pdfContainerRef.current,
+        rootMargin: "500px", 
+        threshold: 0.01,
+      }
+    );
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [totalPages]);
+
+  // Observe page elements
+  useEffect(() => {
+    const observer = observerRef.current;
+    if (!observer) return;
+
+    pageRefs.current.forEach((ref) => {
+      if (ref) observer.observe(ref);
+    });
+
+    return () => {
+      pageRefs.current.forEach((ref) => {
+        if (ref) observer.unobserve(ref);
+      });
+    };
+  }, [totalPages, pageRefs.current]);
+
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -103,8 +154,16 @@ function App() {
   const handleFileUpload = async (file) => {
     if (!file) return;
 
+    const maxSize = 100 * 1024 * 1024; 
+    if (file.size > maxSize) {
+      setError("File size exceeds 100MB limit");
+      setTimeout(() => setError(null), 5000);
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
+    setUploadProgress(0);
     setPdfFile(file);
 
     const formData = new FormData();
@@ -122,14 +181,18 @@ function App() {
         setDocumentId(data.documentId);
         setTotalPages(data.totalPages || 0);
         setPdfUrl(`${API_URL}${data.pdfUrl}`);
-        setMessages([{ type: "system" }]);
-      } else {
-        setError(data.error || "Error uploading PDF");
-        setPdfFile(null);
-      }
+        setMessages([
+          {
+            type: "system",
+            content: `Document uploaded: ${data.totalPages} pages, ${data.totalChunks} chunks`,
+          },
+        ]);
+        setUploadProgress(100);
+      } 
     } catch (err) {
-      console.error("Upload error:", err);
-      setError("Upload failed. Make sure the backend is running on port 5000.");
+      setError(
+        "Upload failed. Make sure the backend is running on port 5000."
+      );
       setPdfFile(null);
     } finally {
       setIsUploading(false);
@@ -174,7 +237,8 @@ function App() {
         ...prev,
         {
           type: "bot",
-          content: "Connection error. Please check if the backend is running.",
+          content:
+            "Connection error. Please check if the backend is running.",
         },
       ]);
     } finally {
@@ -225,16 +289,12 @@ function App() {
           return messageContent;
         })}
 
-        {/* Citations at the end only */}
         {citations.length > 0 && (
           <div className="citation-buttons">
             {citations.map((c, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  const pageEl = pageRefs.current[c - 1];
-                  if (pageEl) pageEl.scrollIntoView({ behavior: "smooth" });
-                }}
+                onClick={() => scrollToPage(c)}
                 className="citation-btn"
               >
                 Page {c}
@@ -246,6 +306,24 @@ function App() {
     );
   };
 
+  const scrollToPage = useCallback((pageNum) => {
+    const pageEl = pageRefs.current[pageNum - 1];
+    if (pageEl) {
+      // Ensure the page is rendered before scrolling
+      setRenderedPages((prev) => new Set([...prev, pageNum]));
+      setTimeout(() => {
+        pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        setCurrentPage(pageNum);
+      }, 100);
+    }
+  }, []);
+
+  const goToPage = (pageNum) => {
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      scrollToPage(pageNum);
+    }
+  };
+
   const removePdf = () => {
     setPdfFile(null);
     setPdfUrl(null);
@@ -255,7 +333,61 @@ function App() {
     setError(null);
     setShowBanner(true);
     setChatWidth(50);
+    setRenderedPages(new Set([1, 2, 3]));
+    setCurrentPage(1);
+    setScale(1.0);
   };
+
+  const handleDocumentLoadSuccess = useCallback(({ numPages }) => {
+    setTotalPages(numPages);
+    // For large PDFs, only render first few pages initially
+    if (numPages > 50) {
+      setRenderedPages(new Set([1, 2, 3, 4, 5]));
+    } else {
+      // For smaller PDFs, render all pages
+      setRenderedPages(new Set(Array.from({ length: numPages }, (_, i) => i + 1)));
+    }
+  }, []);
+
+  // Custom page renderer with canvas optimization
+  const renderPage = useCallback(
+    (pageNumber) => {
+      const shouldRender = renderedPages.has(pageNumber) || totalPages <= 50;
+
+      return (
+        <div
+          key={`page_${pageNumber}`}
+          className="pdf-page-wrapper"
+          ref={(el) => (pageRefs.current[pageNumber - 1] = el)}
+          data-page-number={pageNumber}
+        >
+          <div className="page-number-badge">Page {pageNumber}</div>
+          {shouldRender ? (
+            <Page
+              pageNumber={pageNumber}
+              className="pdf-page"
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              scale={scale}
+              loading={
+                <div className="page-loading">
+                  <Loader2 size={20} className="spinner" />
+                </div>
+              }
+              // Fix canvas warning by setting willReadFrequently
+              canvasBackground="white"
+            />
+          ) : (
+            <div className="page-placeholder">
+              <Loader2 size={24} className="spinner" />
+              <p>Loading page {pageNumber}...</p>
+            </div>
+          )}
+        </div>
+      );
+    },
+    [renderedPages, scale, totalPages]
+  );
 
   const suggestedQuestions = [
     "What is this document about?",
@@ -286,13 +418,22 @@ function App() {
                 )}
               </div>
               <h2>
-                {isUploading ? "Uploading..." : "Upload PDF to start chatting"}
+                {isUploading
+                  ? "Processing PDF..."
+                  : "Upload PDF to start chatting"}
               </h2>
-              <p>Click or drag and drop your file here</p>
-              {error && (
-                <div className="error-banner">
-                  <AlertCircle size={18} />
-                  <span>{error}</span>
+              <p>
+                {isUploading
+                  ? "This may take a moment for large files..."
+                  : "Click or drag and drop your file here"}
+              </p>
+
+              {isUploading && uploadProgress > 0 && (
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
                 </div>
               )}
               <input
@@ -328,15 +469,12 @@ function App() {
               </button>
             </div>
 
-            {showBanner && messages.length === 1 && (
+            {showBanner && messages.length <= 2 && (
               <div className="welcome-banner">
                 <div className="banner-header">
                   <div className="banner-text">
                     <h4>Your document is ready!</h4>
-                    <h5>
-                      You can now ask questions about your document. For
-                      example:
-                    </h5>
+                    <h5>Ask questions about your document:</h5>
                   </div>
                   <button
                     onClick={() => setShowBanner(false)}
@@ -351,7 +489,6 @@ function App() {
                       key={i}
                       onClick={() => {
                         setInputMessage(q);
-                        // setShowBanner(false);
                       }}
                       className="suggestion-btn"
                     >
@@ -363,25 +500,27 @@ function App() {
             )}
 
             <div className="chat-messages">
-              {messages.map((m, i) => (
-                <div key={i} className={`message ${m.type}`}>
-                  {m.type === "user" && (
-                    <div className="user-message">
-                      <div className="message-bubble">{m.content}</div>
-                    </div>
-                  )}
+              {messages
+                .filter((m) => m.type !== "system")
+                .map((m, i) => (
+                  <div key={i} className={`message ${m.type}`}>
+                    {m.type === "user" && (
+                      <div className="user-message">
+                        <div className="message-bubble">{m.content}</div>
+                      </div>
+                    )}
 
-                  {m.type === "bot" && (
-                    <div className="bot-message">
-                      <div className="message-bubble">
-                        <div className="message-content">
-                          {formatBotMessage(m.content, m.citations)}
+                    {m.type === "bot" && (
+                      <div className="bot-message">
+                        <div className="message-bubble">
+                          <div className="message-content">
+                            {formatBotMessage(m.content, m.citations)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                ))}
 
               {isLoading && (
                 <div className="bot-message">
@@ -425,35 +564,32 @@ function App() {
             onMouseDown={() => setIsResizing(true)}
           />
 
-          <div className="pdf-section" style={{ width: `${100 - chatWidth}%` }}>
+          <div
+            className="pdf-section"
+            style={{ width: `${100 - chatWidth}%` }}
+          >
             <div className="pdf-container" ref={pdfContainerRef}>
               {pdfUrl ? (
                 <Document
                   file={pdfUrl}
-                  onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
+                  onLoadSuccess={handleDocumentLoadSuccess}
                   loading={
                     <div className="pdf-loading">
                       <Loader2 size={32} className="spinner" />
                       <p>Loading PDF...</p>
                     </div>
                   }
+                  options={{
+                    cMapUrl: "https://unpkg.com/pdfjs-dist@3.11.174/cmaps/",
+                    cMapPacked: true,
+                    standardFontDataUrl:
+                      "https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/",
+                  }}
                 >
                   <div className="pdf-pages-container">
-                    {Array.from({ length: totalPages }, (_, index) => (
-                      <div
-                        key={`page_${index + 1}`}
-                        className="pdf-page-wrapper"
-                        ref={(el) => (pageRefs.current[index] = el)}
-                      >
-                        <Page
-                          pageNumber={index + 1}
-                          className="pdf-page"
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                          scale={1.5} // Adjust scale as needed for better visibility
-                        />
-                      </div>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, index) =>
+                      renderPage(index + 1)
+                    )}
                   </div>
                 </Document>
               ) : (

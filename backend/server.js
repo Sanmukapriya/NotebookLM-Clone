@@ -6,6 +6,9 @@ import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,11 +16,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 5000;
 
+// API Configuration - Set your API keys in .env file
+const AI_PROVIDER = process.env.AI_PROVIDER || "gemini";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-// === Storage Config ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = "uploads/";
@@ -28,12 +36,15 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
-const upload = multer({ storage });
 
-// === In-memory document store ===
+const upload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+});
+
 const documentStore = new Map();
 
-// Enhanced chunking with semantic boundaries
+// Enhanced chunking
 function chunkText(text, chunkSize = 1000, overlap = 300) {
   try {
     if (!text || text.length === 0) return [];
@@ -45,10 +56,8 @@ function chunkText(text, chunkSize = 1000, overlap = 300) {
       let end = Math.min(start + chunkSize, text.length);
 
       if (end < text.length) {
-        // Look ahead for good breaking points
         const lookAhead = text.slice(end, Math.min(end + 200, text.length));
 
-        // Priority: paragraph > sentence > word boundary
         const breakPoints = [
           { pattern: /\n\n/, weight: 3 },
           { pattern: /[.!?]\s+/, weight: 2 },
@@ -78,10 +87,9 @@ function chunkText(text, chunkSize = 1000, overlap = 300) {
       }
 
       start = end - overlap;
-      if (start >= text.length || chunks.length > 1000) break;
+      if (start >= text.length || chunks.length > 2000) break;
     }
 
-    console.log(`Created ${chunks.length} chunks from text`);
     return chunks;
   } catch (error) {
     console.error("Error in chunkText:", error);
@@ -89,7 +97,7 @@ function chunkText(text, chunkSize = 1000, overlap = 300) {
   }
 }
 
-// Robust page extraction from PDF
+// Extract pages
 function extractPages(pdfData) {
   try {
     const pages = [];
@@ -100,11 +108,9 @@ function extractPages(pdfData) {
       return pages;
     }
 
-    // Primary method: Split by form feed character
     const pageTexts = fullText.split("\f");
 
     if (pageTexts.length > 1) {
-      // Successfully split into pages
       pageTexts.forEach((pageText, idx) => {
         const trimmed = pageText.trim();
         if (trimmed.length > 30) {
@@ -116,7 +122,6 @@ function extractPages(pdfData) {
       });
       console.log(`Extracted ${pages.length} pages using form feed`);
     } else {
-      // Fallback: Create logical pages based on character count
       const avgPageSize = Math.max(
         1500,
         Math.floor(fullText.length / (pdfData.numpages || 1))
@@ -126,7 +131,6 @@ function extractPages(pdfData) {
       for (let i = 0; i < fullText.length; i += avgPageSize) {
         let end = Math.min(i + avgPageSize, fullText.length);
 
-        // Try to break at paragraph
         if (end < fullText.length) {
           const lookAhead = fullText.slice(
             end,
@@ -156,7 +160,7 @@ function extractPages(pdfData) {
   }
 }
 
-// Improved text similarity with stricter scoring
+// Text similarity
 function calculateTextSimilarity(query, text) {
   try {
     if (!query || !text) return 0;
@@ -164,13 +168,53 @@ function calculateTextSimilarity(query, text) {
     const queryLower = query.toLowerCase();
     const textLower = text.toLowerCase();
 
-    // Common stopwords to filter
     const stopwords = new Set([
-      "the", "is", "at", "which", "on", "a", "an", "and", "or", "but",
-      "in", "with", "to", "for", "of", "as", "by", "from", "be", "are",
-      "was", "were", "been", "has", "have", "had", "do", "does", "did",
-      "will", "would", "could", "should", "can", "may", "might", "this",
-      "that", "these", "those", "it", "its", "what", "who", "where", "when",
+      "the",
+      "is",
+      "at",
+      "which",
+      "on",
+      "a",
+      "an",
+      "and",
+      "or",
+      "but",
+      "in",
+      "with",
+      "to",
+      "for",
+      "of",
+      "as",
+      "by",
+      "from",
+      "be",
+      "are",
+      "was",
+      "were",
+      "been",
+      "has",
+      "have",
+      "had",
+      "do",
+      "does",
+      "did",
+      "will",
+      "would",
+      "could",
+      "should",
+      "can",
+      "may",
+      "might",
+      "this",
+      "that",
+      "these",
+      "those",
+      "it",
+      "its",
+      "what",
+      "who",
+      "where",
+      "when",
     ]);
 
     const queryWords = queryLower
@@ -182,35 +226,29 @@ function calculateTextSimilarity(query, text) {
     const textWords = textLower.split(/\W+/);
     let score = 0;
 
-    // 1. Exact phrase matching (highest priority)
     if (textLower.includes(queryLower)) {
       score += 100;
     }
 
-    // 2. Individual word matching with position weighting
     queryWords.forEach((qWord) => {
-      // Exact word matches
       const exactMatches = textWords.filter((w) => w === qWord).length;
-      score += exactMatches * 15; // Increased weight
+      score += exactMatches * 15;
 
-      // Partial matches (word contains query word) - reduced weight
       const partialMatches = textWords.filter(
         (w) => w.length > qWord.length && w.includes(qWord)
       ).length;
-      score += partialMatches * 2; // Reduced weight
+      score += partialMatches * 2;
 
-      // Stemming (remove common suffixes)
       const qStem = qWord.replace(/(?:ing|ed|s|es|ly|er|est)$/i, "");
       if (qStem.length > 3) {
         const stemMatches = textWords.filter((w) => {
           const wStem = w.replace(/(?:ing|ed|s|es|ly|er|est)$/i, "");
           return wStem === qStem && w !== qWord;
         }).length;
-        score += stemMatches * 5; // Increased weight
+        score += stemMatches * 5;
       }
     });
 
-    // 3. Multi-word proximity scoring
     if (queryWords.length > 1) {
       for (let i = 0; i < queryWords.length - 1; i++) {
         const word1Pos = textLower.indexOf(queryWords[i]);
@@ -219,28 +257,24 @@ function calculateTextSimilarity(query, text) {
         if (word1Pos !== -1 && word2Pos !== -1) {
           const distance = Math.abs(word2Pos - word1Pos);
 
-          // Close proximity bonus (within 50 characters)
           if (distance < 50) {
-            score += 20 * (1 - distance / 50); // Increased bonus
+            score += 20 * (1 - distance / 50);
           } else if (distance < 200) {
-            score += 8 * (1 - distance / 200); // Increased bonus
+            score += 8 * (1 - distance / 200);
           }
         }
       }
     }
 
-    // 4. Coverage score - how many query words appear
     const matchedWords = queryWords.filter((qw) =>
-      textWords.some((tw) => tw === qw) // Only exact matches
+      textWords.some((tw) => tw === qw)
     ).length;
     const coverageRatio = matchedWords / queryWords.length;
-    score += coverageRatio * 30; // Increased weight
+    score += coverageRatio * 30;
 
-    // 5. Density bonus - concentration of matches
     const matchDensity = matchedWords / Math.max(textWords.length, 1);
-    score += matchDensity * 150; // Increased weight
+    score += matchDensity * 150;
 
-    // Normalize by text length (sqrt to reduce impact)
     const normalizedScore = score / Math.sqrt(textWords.length);
 
     return normalizedScore;
@@ -250,7 +284,7 @@ function calculateTextSimilarity(query, text) {
   }
 }
 
-// Find most relevant chunks with stricter thresholds
+// Find relevant chunks
 async function findRelevantChunks(query, documentId, topK = 10) {
   try {
     const docData = documentStore.get(documentId);
@@ -263,28 +297,26 @@ async function findRelevantChunks(query, documentId, topK = 10) {
       `\n🔍 Searching "${query}" across ${docData.chunks.length} chunks`
     );
 
-    // Calculate similarity for all chunks
     const chunksWithScores = docData.chunks.map((chunk) => ({
       ...chunk,
       similarity: calculateTextSimilarity(query, chunk.content),
     }));
 
-    // Sort by similarity
     chunksWithScores.sort((a, b) => b.similarity - a.similarity);
 
-    // Stricter dynamic threshold
     const topScore = chunksWithScores[0]?.similarity || 0;
-    const dynamicThreshold = Math.max(1.2, topScore * 0.6); // Increased thresholds
+    const dynamicThreshold = Math.max(1.2, topScore * 0.6);
 
     const relevant = chunksWithScores
       .filter((chunk) => chunk.similarity >= dynamicThreshold)
       .slice(0, topK);
 
-    // Check if average similarity is too low
     if (relevant.length > 0) {
-      const avgSimilarity = relevant.reduce((sum, chunk) => sum + chunk.similarity, 0) / relevant.length;
-      
-      if (avgSimilarity < 1.0) { // Increased threshold
+      const avgSimilarity =
+        relevant.reduce((sum, chunk) => sum + chunk.similarity, 0) /
+        relevant.length;
+
+      if (avgSimilarity < 1.0) {
         console.log(`Average similarity too low: ${avgSimilarity.toFixed(2)}`);
         return [];
       }
@@ -295,12 +327,6 @@ async function findRelevantChunks(query, documentId, topK = 10) {
         relevant.length
       } relevant chunks (threshold: ${dynamicThreshold.toFixed(2)})`
     );
-    relevant.slice(0, 5).forEach((r, i) => {
-      console.log(
-        `  ${i + 1}. Page ${r.pageNumber}, Score: ${r.similarity.toFixed(2)}`
-      );
-      console.log(`     Preview: ${r.content.substring(0, 100)}...`);
-    });
 
     return relevant;
   } catch (error) {
@@ -309,41 +335,162 @@ async function findRelevantChunks(query, documentId, topK = 10) {
   }
 }
 
-// Enhanced Ollama call with better parameters
-async function callLocalModel(prompt, maxTokens = 800) {
+// === AI Model Calls ===
+// === AI Model Calls ===
+async function listAvailableModels() {
   try {
-    console.log("📤 Sending to Ollama...");
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`
+    );
 
-    const res = await fetch("http://localhost:11434/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemma3:1b",
-        prompt: prompt,
-        stream: false,
-        options: {
-          temperature: 0.2, // Lower temperature for more factual responses
-          top_p: 0.8,
-          top_k: 30,
-          repeat_penalty: 1.2,
-          num_predict: maxTokens,
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Ollama error: ${res.status}`);
+    if (!response.ok) {
+      throw new Error(`Failed to list models: ${response.status}`);
     }
 
-    const data = await res.json();
-    console.log("📥 Received response from Ollama");
-    return data.response || "Unable to generate response.";
+    const data = await response.json();
+    console.log("Available models:", data);
+    return data.models;
   } catch (error) {
-    console.error("Ollama error:", error);
-    if (error.code === "ECONNREFUSED") {
-      throw new Error("Ollama is not running. Start it with: ollama serve");
-    }
+    console.error("Error listing models:", error);
     throw error;
+  }
+}
+
+// Google Gemini API
+async function callGeminiAPI(prompt, maxTokens = 1000) {
+  try {
+    console.log("📤 Sending to Google Gemini...");
+
+    // Properly await the listAvailableModels function
+    const models = await listAvailableModels();
+    console.log("Available models:", models);
+
+    // Find a suitable model that supports generateContent
+    const supportedModel = models.find(
+      (model) =>
+        model.supportedGenerationMethods &&
+        model.supportedGenerationMethods.includes("generateContent")
+    );
+
+    if (!supportedModel) {
+      throw new Error("No models found that support generateContent");
+    }
+
+    // Extract the model name (remove the "models/" prefix)
+    const modelName = supportedModel.name.replace("models/", "");
+    console.log(`Using model: ${modelName}`);
+
+    // Use the found model
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: maxTokens,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    console.log("📥 Received response from Gemini");
+
+    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    return "Unable to generate response.";
+  } catch (error) {
+    console.error("Gemini error:", error);
+    throw error;
+  }
+}
+
+// Groq API
+async function callGroqAPI(prompt, maxTokens = 1000) {
+  try {
+    console.log("📤 Sending to Groq...");
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: maxTokens,
+          top_p: 0.9,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Groq API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    console.log("📥 Received response from Groq");
+
+    if (data.choices && data.choices[0]?.message?.content) {
+      return data.choices[0].message.content;
+    }
+
+    return "Unable to generate response.";
+  } catch (error) {
+    console.error("Groq error:", error);
+    throw error;
+  }
+}
+
+// Universal AI call function
+async function callAIModel(prompt, maxTokens = 1000) {
+  switch (AI_PROVIDER.toLowerCase()) {
+    case "gemini":
+      if (!GEMINI_API_KEY) {
+        throw new Error(
+          "GEMINI_API_KEY not found. Get it from https://aistudio.google.com/app/apikey"
+        );
+      }
+      return await callGeminiAPI(prompt, maxTokens);
+
+    case "groq":
+      if (!GROQ_API_KEY) {
+        throw new Error(
+          "GROQ_API_KEY not found. Get it from https://console.groq.com"
+        );
+      }
+      return await callGroqAPI(prompt, maxTokens);
+
+    default:
+      throw new Error(
+        `Unknown AI provider: ${AI_PROVIDER}. Use 'gemini', or 'groq'`
+      );
   }
 }
 
@@ -354,10 +501,20 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
       return res.status(400).json({ success: false, error: "No PDF uploaded" });
     }
 
-    console.log(`\n📄 Processing: ${req.file.originalname}`);
+    console.log(
+      `\n📄 Processing: ${req.file.originalname} (${(
+        req.file.size /
+        1024 /
+        1024
+      ).toFixed(2)} MB)`
+    );
 
     const pdfBuffer = fs.readFileSync(req.file.path);
-    const pdfData = await pdfParse(pdfBuffer);
+
+    console.log("🔍 Parsing PDF...");
+    const pdfData = await pdfParse(pdfBuffer, {
+      max: 0,
+    });
 
     if (!pdfData.text || pdfData.text.trim().length < 50) {
       return res.status(400).json({
@@ -367,14 +524,20 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
     }
 
     console.log(
-      `📊 Extracted: ${pdfData.text.length} chars, ${pdfData.numpages} pages`
+      `📊 Extracted: ${(pdfData.text.length / 1024).toFixed(2)} KB text, ${
+        pdfData.numpages
+      } pages`
     );
 
+    console.log("📑 Extracting pages...");
     const pages = extractPages(pdfData);
 
-    // Create chunks from each page with page tracking
+    console.log("✂️ Creating chunks...");
     const chunks = [];
-    pages.forEach((page) => {
+    pages.forEach((page, pageIdx) => {
+      if (pageIdx % 50 === 0) {
+        console.log(`   Processing page ${pageIdx + 1}/${pages.length}...`);
+      }
       const pageChunks = chunkText(page.content, 1000, 300);
       pageChunks.forEach((content, idx) => {
         chunks.push({
@@ -392,6 +555,7 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
       originalName: req.file.originalname,
       fullText: pdfData.text,
       numPages: pdfData.numpages,
+      uploadedAt: new Date().toISOString(),
     });
 
     console.log(`✅ Stored: ${pages.length} pages, ${chunks.length} chunks\n`);
@@ -402,9 +566,20 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
       pdfUrl: `/uploads/${req.file.filename}`,
       totalPages: pages.length,
       totalChunks: chunks.length,
+      fileSize: req.file.size,
+      aiProvider: AI_PROVIDER,
     });
   } catch (error) {
     console.error("Upload error:", error);
+
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error("Cleanup error:", cleanupError);
+      }
+    }
+
     res.status(500).json({
       success: false,
       error: "Upload failed: " + error.message,
@@ -412,7 +587,7 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// === Enhanced Chat Route ===
+// === Chat Route ===
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, documentId } = req.body;
@@ -434,20 +609,18 @@ app.post("/api/chat", async (req, res) => {
 
     console.log(`\n💬 Question: "${message}"`);
 
-    // Find relevant chunks with stricter thresholds
     const relevant = await findRelevantChunks(message, documentId, 10);
 
-    // If no relevant chunks found, return immediately
     if (relevant.length === 0) {
       console.log("❌ No relevant information found in document");
       return res.json({
         success: true,
-        response: "I couldn't find relevant information in the document to answer your question. Please try rephrasing or asking about different topics covered in the document.",
+        response:
+          "I couldn't find relevant information in the document to answer your question. Please try rephrasing or asking about different topics covered in the document.",
         citations: [],
       });
     }
 
-    // Build rich context with page references
     const context = relevant
       .map((chunk, idx) => {
         const preview =
@@ -458,11 +631,10 @@ app.post("/api/chat", async (req, res) => {
       })
       .join("\n\n---\n\n");
 
-    // Enhanced prompt with strict instructions
     const prompt = `You are an expert document analyst. Your task is to provide detailed, accurate answers based solely on the document excerpts provided below.
 
 DOCUMENT EXCERPTS:
- ${context}
+${context}
 
 USER QUESTION: ${message}
 
@@ -471,16 +643,15 @@ CRITICAL INSTRUCTIONS:
 2. Be detailed and thorough - aim for 3-5 sentences minimum when information is available
 3. Synthesize information from multiple sources when relevant
 4. If specific page numbers are mentioned in brackets, you can reference them (e.g., "According to Page 3...")
-5. If the provided excerpts do not contain information to answer the question, respond ONLY with "I couldn't find relevant information in the document to answer your question. Please try rephrasing or asking about different topics covered in the document." Do not attempt to guess or invent an answer.
+5. If the provided excerpts do not contain information to answer the question, respond ONLY with "I couldn't find relevant information in the document to answer your question."
 6. Structure your answer clearly with proper paragraphs if needed
 7. Do NOT invent, assume, or add any information not present in the excerpts
 8. If the question asks for a list or multiple items, provide complete details for each
 
 DETAILED ANSWER:`;
 
-    const response = await callLocalModel(prompt, 800);
+    const response = await callAIModel(prompt, 1000);
 
-    // Check if response indicates no information was found
     const noInfoPhrases = [
       "I couldn't find relevant information",
       "I don't have information",
@@ -488,23 +659,22 @@ DETAILED ANSWER:`;
       "No information available",
       "I'm unable to answer",
       "The document doesn't mention",
-      "There is no information"
+      "There is no information",
     ];
 
-    const hasNoInfo = noInfoPhrases.some(phrase => 
+    const hasNoInfo = noInfoPhrases.some((phrase) =>
       response.toLowerCase().includes(phrase.toLowerCase())
     );
 
-    // If model indicates no information or we have no relevant chunks, return standard response
-    if (hasNoInfo || relevant.length === 0) {
+    if (hasNoInfo) {
       return res.json({
         success: true,
-        response: "I couldn't find relevant information in the document to answer your question. Please try rephrasing or asking about different topics covered in the document.",
+        response:
+          "I couldn't find relevant information in the document to answer your question. Please try rephrasing or asking about different topics covered in the document.",
         citations: [],
       });
     }
 
-    // Extract unique page citations
     const significantChunks = relevant.filter(
       (chunk) => chunk.similarity > 1.5
     );
@@ -531,16 +701,13 @@ DETAILED ANSWER:`;
         chunksAnalyzed: docData.chunks.length,
         relevantChunks: relevant.length,
         topScore: relevant[0]?.similarity.toFixed(2),
+        aiProvider: AI_PROVIDER,
       },
     });
   } catch (error) {
     console.error("Chat error:", error);
 
-    let errorMessage = "Failed to process question";
-    if (error.message.includes("Ollama")) {
-      errorMessage =
-        "AI service unavailable. Ensure Ollama is running (ollama serve)";
-    }
+    let errorMessage = "Failed to process question: " + error.message;
 
     res.status(500).json({
       success: false,
@@ -551,25 +718,25 @@ DETAILED ANSWER:`;
 
 // === Health Check ===
 app.get("/api/health", async (req, res) => {
-  try {
-    const ollamaRes = await fetch("http://localhost:11434/api/tags", {
-      method: "GET",
-    });
+  let aiStatus = "unknown";
 
-    res.json({
-      success: true,
-      backend: "running",
-      ollama: ollamaRes.ok ? "connected" : "disconnected",
-      documents: documentStore.size,
-    });
+  try {
+    if (AI_PROVIDER === "gemini") {
+      aiStatus = GEMINI_API_KEY ? "configured" : "missing API key";
+    } else if (AI_PROVIDER === "groq") {
+      aiStatus = GROQ_API_KEY ? "configured" : "missing API key";
+    }
   } catch (error) {
-    res.json({
-      success: true,
-      backend: "running",
-      ollama: "disconnected",
-      documents: documentStore.size,
-    });
+    aiStatus = "error";
   }
+
+  res.json({
+    success: true,
+    backend: "running",
+    aiProvider: AI_PROVIDER,
+    aiStatus: aiStatus,
+    documents: documentStore.size,
+  });
 });
 
 // === Document Info Route ===
@@ -588,6 +755,7 @@ app.get("/api/document/:documentId/info", (req, res) => {
     pages: docData.pages.length,
     chunks: docData.chunks.length,
     textLength: docData.fullText?.length || 0,
+    uploadedAt: docData.uploadedAt,
     samplePages: docData.pages.slice(0, 3).map((p) => ({
       page: p.pageNumber,
       preview: p.content.substring(0, 150) + "...",
@@ -595,12 +763,27 @@ app.get("/api/document/:documentId/info", (req, res) => {
   });
 });
 
+// === Favicon Route ===
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end();
+});
+
 app.listen(PORT, () => {
-  console.log(`\n${"=".repeat(50)}`);
+  console.log(`\n${"=".repeat(60)}`);
   console.log(`🚀 PDF RAG Server Started`);
-  console.log(`${"=".repeat(50)}`);
+  console.log(`${"=".repeat(60)}`);
   console.log(`📍 Server: http://localhost:${PORT}`);
   console.log(`💚 Health: http://localhost:${PORT}/api/health`);
-  console.log(`🤖 Ollama: http://localhost:11434`);
-  console.log(`${"=".repeat(50)}\n`);
+  console.log(`🤖 AI Provider: ${AI_PROVIDER.toUpperCase()}`);
+
+  if (AI_PROVIDER === "gemini") {
+    console.log(
+      `🔑 Gemini API: ${GEMINI_API_KEY ? "✓ Configured" : "✗ Missing"}`
+    );
+  } else if (AI_PROVIDER === "groq") {
+    console.log(`🔑 Groq API: ${GROQ_API_KEY ? "✓ Configured" : "✗ Missing"}`);
+  }
+
+  console.log(`📁 Max file size: 100MB`);
+  console.log(`${"=".repeat(60)}\n`);
 });

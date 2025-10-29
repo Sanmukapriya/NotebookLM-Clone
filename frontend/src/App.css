@@ -68,18 +68,6 @@
     margin-bottom: 20px;
 }
 
-.error-banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #fee;
-    color: #c33;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-top: 16px;
-    font-size: 14px;
-}
-
 /* Main Layout */
 .main-layout {
     display: flex;
@@ -134,11 +122,6 @@
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 2px;
-}
-
-.doc-details span {
-    font-size: 13px;
-    opacity: 0.9;
 }
 
 .remove-btn {
@@ -404,15 +387,6 @@
     color: #6b7280;
 }
 
-.react-pdf__Document {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-}
-
-/* Add these styles to your existing CSS */
-
 .pdf-pages-container {
     display: flex;
     flex-direction: column;
@@ -434,17 +408,6 @@
     background: white;
 }
 
-.react-pdf__Page {
-    display: flex;
-    justify-content: center;
-}
-
-.react-pdf__Page__canvas {
-    max-width: 100%;
-    height: auto !important;
-}
-
-/* Ensure PDF container scrolls properly */
 .pdf-container {
     flex: 1;
     overflow-y: auto;
@@ -453,25 +416,114 @@
     background: #f5f5f5;
 }
 
-/*ipad pro landscape*/
-@media(min-width: 1181px) and (max-width: 1400px) {}
+.progress-bar {
+    width: 100%;
+    max-width: 400px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 20px;
+}
 
-/*ipad air landscape*/
-/*ipad pro portrait*/
-@media(min-width: 1024px) and (max-width: 1180px) {}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+}
 
-/*ipad Air portrait*/
-@media(min-width: 768px) and (max-width: 1023px) {}
+.pdf-page-wrapper {
+    position: relative;
+    margin: 20px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+}
 
-/*mobile landscape*/
-@media(min-width: 667px) and (max-width: 767px) {}
+.page-number-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 1;
+}
+
+.page-placeholder {
+    min-height: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    color: #999;
+}
+
+.page-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #999;
+}
+
+/* Optimize PDF rendering */
+
+.react-pdf__Document {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.react-pdf__Page {
+    display: flex;
+    justify-content: center;
+}
+
+
+.react-pdf__Page__canvas {
+    max-width: 100%;
+    height: auto !important;
+    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.react-pdf__Page__textContent {
+    display: none !important;
+}
+
+.react-pdf__Page__annotations {
+    display: none !important;
+}
+
+/* Smooth scrolling for PDF container */
+.pdf-container {
+    scroll-behavior: smooth;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
 
 /*mobile portrait*/
 @media(max-width: 666px) {
-    /* .main-layout {
-        flex-direction: column;
-    } */
-
     .app-container {
         overflow: visible;
     }
@@ -491,7 +543,7 @@
     }
 
     .chat-messages {
-        padding: 0px 5px 0px 10px;
+        padding: 20px 5px 0px 10px;
     }
 
     .welcome-banner {
@@ -552,11 +604,11 @@
         font-size: 9px;
     }
 
-    .loading-indicator{
+    .loading-indicator {
         font-size: 10px;
     }
 
-    .doc-info svg{
+    .doc-info svg {
         display: none;
     }
 }
