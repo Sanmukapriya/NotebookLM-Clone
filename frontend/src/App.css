@@ -68,6 +68,20 @@
     margin-bottom: 20px;
 }
 
+<<<<<<< HEAD=======.error-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fee;
+    color: #c33;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+>>>>>>>658710c (Updated app with UI and logic)
+
 /* Main Layout */
 .main-layout {
     display: flex;
@@ -122,6 +136,11 @@
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 2px;
+}
+
+.doc-details span {
+    font-size: 13px;
+    opacity: 0.9;
 }
 
 .remove-btn {
@@ -524,6 +543,86 @@
 
 /*mobile portrait*/
 @media(max-width: 666px) {
+    =======
+}
+
+.pdf-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    background: #f5f5f5;
+}
+
+.pdf-page {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.pdf-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #6b7280;
+}
+
+.react-pdf__Document {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Add these styles to your existing CSS */
+
+.pdf-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.pdf-page-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.pdf-page {
+    max-width: 100%;
+    height: auto !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.react-pdf__Page {
+    display: flex;
+    justify-content: center;
+}
+
+.react-pdf__Page__canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Ensure PDF container scrolls properly */
+.pdf-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    background: #f5f5f5;
+}
+
+/*mobile portrait*/
+@media(max-width: 666px) {
+
     .app-container {
         overflow: visible;
     }
@@ -603,6 +702,11 @@
     .citation-btn {
         font-size: 9px;
     }
+
+    .loading-indicator {
+        font-size: 10px;
+    }
+
 
     .loading-indicator {
         font-size: 10px;

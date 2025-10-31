@@ -587,7 +587,7 @@ app.post("/api/upload", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// === Chat Route ===
+// === Enhanced Chat Route ===
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, documentId } = req.body;
