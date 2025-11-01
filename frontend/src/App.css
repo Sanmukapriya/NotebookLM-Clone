@@ -537,11 +537,6 @@
     animation: spin 1s linear infinite;
 }
 
-/*mobile portrait*/
-@media(max-width: 666px) {
-    =======
-}
-
 .pdf-container {
     flex: 1;
     overflow-y: auto;
