@@ -100,7 +100,6 @@
     background: #F3F4F6;
     height: 100vh;
     overflow: hidden;
-    transition: width 0.2s;
 }
 
 /* Chat Header */
@@ -499,6 +498,7 @@
    Mobile Styles
 =============================== */
 @media(max-width: 666px) {
+
     .app-container {
         overflow: visible;
     }
@@ -538,6 +538,8 @@
     }
 
     .chat-input {
+        width: 100%;
+        height: 100%;
         padding: 7px 10px;
         font-size: 12px;
     }
@@ -555,6 +557,14 @@
         padding: 5px;
     }
 
+    .lucide-send {
+        width: 65%;
+    }
+
+    .input-wrapper {
+        gap: 7px;
+    }
+
     .bot-message,
     .user-message {
         max-width: 100%;
@@ -568,6 +578,11 @@
     .citation-btn {
         font-size: 9px;
     }
+
+    .loading-indicator {
+        font-size: 10px;
+    }
+
 
     .loading-indicator {
         font-size: 10px;
