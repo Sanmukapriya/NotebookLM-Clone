@@ -1,0 +1,399 @@
+/* ===============================
+   Chat Section
+=============================== */
+.chat-section {
+  display: flex;
+  flex-direction: column;
+  background: #F3F4F6;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Chat Header */
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #faf5ff;
+  color: #551a87;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.doc-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doc-details h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.doc-details span {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.remove-btn {
+  background: white;
+  border: none;
+  color: #3b4451;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.remove-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===============================
+ Welcome Banner
+=============================== */
+.welcome-banner {
+  background: #faf5ff;
+  margin: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #c0c4d5;
+}
+
+.banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.banner-text h4 {
+  font-size: 15px;
+  color: #4c1d95;
+  margin-bottom: 12px;
+}
+
+.banner-text h5 {
+  color: #7b33af;
+}
+
+.suggested-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-btn {
+  background: white;
+  border: 1px solid #c7d2fe;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #4c1d95;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.suggestion-btn:hover {
+  background: #f5f3ff;
+  border-color: #a78bfa;
+  transform: translateX(4px);
+}
+
+/* ===============================
+ Chat Messages
+=============================== */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-message {
+  align-self: flex-end;
+  max-width: 75%;
+}
+
+.user-message .message-bubble {
+  background: #ebe3f3;
+  color: black;
+  padding: 12px 16px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.bot-message {
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.bot-message .message-bubble {
+  background: #ebe3f3;
+  color: black;
+  padding: 16px;
+  border-radius: 16px 16px 16px 4px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.message-content {
+  margin-bottom: 12px;
+}
+
+.message-paragraph {
+  margin-bottom: 12px;
+}
+
+.message-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.formatted-list {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.formatted-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.citation-buttons {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.citation-btn {
+  background: #e1cff3;
+  border: none;
+  color: #551A87;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.citation-btn:hover {
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f3f4f6;
+  padding: 12px 16px;
+  border-radius: 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===============================
+ Chat Input
+=============================== */
+.chat-input-area {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.chat-input:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.send-button {
+  background-color: rgb(130 8 241 / 50%);
+  color: white;
+  border: none;
+  padding: 12px 9px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   Resizer
+=============================== */
+.resizer {
+  width: 7px;
+  background: #d1d5db;
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+}
+
+.resizer:hover {
+  background: #9ca3af;
+}
+
+.resizer.resizing {
+  background: #6b7280;
+}
+
+/* ===============================
+ Mobile Styles for ChatSection
+=============================== */
+
+/*mobile landscape*/
+@media(min-width: 667px) and (max-width: 767px) {
+  .doc-info svg {
+    display: none;
+  }
+}
+
+@media(max-width: 666px) {
+  .chat-section {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .doc-details h3 {
+    font-size: 12px;
+  }
+
+  .remove-btn {
+    padding: 3px;
+  }
+
+  .chat-messages {
+    padding: 20px 5px 0px 10px;
+  }
+
+  .welcome-banner {
+    padding: 10px;
+  }
+
+  .banner-header {
+    flex-direction: column-reverse;
+    text-align: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .suggestion-btn {
+    text-align: center;
+    font-size: 11px;
+  }
+
+  .chat-input {
+    width: 100%;
+    height: 100%;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .chat-input::placeholder {
+    font-size: 7px;
+  }
+
+  .chat-input-area {
+    padding: 10px 10px;
+  }
+
+  .send-button {
+    border-radius: 7px;
+    padding: 5px;
+  }
+
+  .lucide-send {
+    width: 65%;
+  }
+
+  .input-wrapper {
+    gap: 7px;
+  }
+
+  .bot-message,
+  .user-message {
+    max-width: 100%;
+  }
+
+  .user-message .message-bubble,
+  .bot-message .message-bubble {
+    font-size: 12px;
+  }
+
+  .citation-btn {
+    font-size: 9px;
+  }
+
+  .loading-indicator {
+    font-size: 10px;
+  }
+
+  .doc-info svg {
+    display: none;
+  }
+}

@@ -498,7 +498,6 @@
    Mobile Styles
 =============================== */
 @media(max-width: 666px) {
-
     .app-container {
         overflow: visible;
     }

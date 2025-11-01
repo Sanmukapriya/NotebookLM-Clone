@@ -1,0 +1,69 @@
+/* ===============================
+   Upload Screen
+=============================== */
+.upload-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+}
+
+.upload-area {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 3rem 25px 3rem;
+  max-width: 500px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  text-align: center;
+  cursor: pointer;
+}
+
+.upload-area.dragging {
+  border-color: #667eea;
+  background: #f0f4ff;
+  transform: scale(1.02);
+}
+
+.upload-icon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FAF5FF;
+  border-radius: 50%;
+  color: #9333EA;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.upload-area h2 {
+  margin-bottom: 12px;
+}
+
+.upload-area p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fee;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  font-size: 14px;
+}

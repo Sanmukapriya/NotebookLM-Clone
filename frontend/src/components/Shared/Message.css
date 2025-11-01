@@ -1,0 +1,99 @@
+/* ===============================
+   Message Components
+=============================== */
+.message {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-message {
+  align-self: flex-end;
+  max-width: 75%;
+}
+
+.user-message .message-bubble {
+  background: #ebe3f3;
+  color: black;
+  padding: 12px 16px;
+  border-radius: 16px 16px 4px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.bot-message {
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+.bot-message .message-bubble {
+  background: #ebe3f3;
+  color: black;
+  padding: 16px;
+  border-radius: 16px 16px 16px 4px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.message-content {
+  margin-bottom: 12px;
+}
+
+.message-paragraph {
+  margin-bottom: 12px;
+}
+
+.message-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.formatted-list {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.formatted-list li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.citation-buttons {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.citation-btn {
+  background: #e1cff3;
+  border: none;
+  color: #551A87;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.citation-btn:hover {
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* ===============================
+ Mobile Styles for Message
+=============================== */
+@media(max-width: 666px) {
+  .bot-message,
+  .user-message {
+      max-width: 100%;
+  }
+
+  .user-message .message-bubble,
+  .bot-message .message-bubble {
+      font-size: 12px;
+  }
+
+  .citation-btn {
+      font-size: 9px;
+  }
+}

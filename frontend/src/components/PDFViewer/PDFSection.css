@@ -1,0 +1,96 @@
+/* ===============================
+   PDF Section
+=============================== */
+.pdf-section {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.pdf-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* gap: 16px; */
+    background: #f5f5f5;
+    scroll-behavior: smooth;
+}
+
+.pdf-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* gap: 16px; */
+    width: 100%;
+}
+
+.pdf-page-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    margin: 20px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.page-number-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 1;
+}
+
+
+.pdf-page {
+    max-width: 100%;
+    height: auto !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.page-placeholder,
+.page-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #999;
+}
+
+.react-pdf__Document {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.react-pdf__Page {
+    display: flex;
+    justify-content: center;
+}
+
+.react-pdf__Page__canvas {
+    max-width: 100%;
+    height: auto !important;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.react-pdf__Page__textContent,
+.react-pdf__Page__annotations {
+    display: none !important;
+}
