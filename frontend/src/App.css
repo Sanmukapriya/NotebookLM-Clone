@@ -67,8 +67,6 @@
     color: #666;
     margin-bottom: 20px;
 }
-
-<<<<<<< HEAD=======.error-banner {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -79,8 +77,6 @@
     margin-top: 16px;
     font-size: 14px;
 }
-
->>>>>>>658710c (Updated app with UI and logic)
 
 /* Main Layout */
 .main-layout {
